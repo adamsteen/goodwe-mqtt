@@ -1,4 +1,4 @@
-# goodwe-autodiscovery
+# goodwe-mqtt
 
 Small Python helper for finding and reading local GoodWe inverter runtime data.
 
@@ -32,13 +32,13 @@ The current PyPI `goodwe` release may not support `dtls=True`. If your dongle ad
 Try autodiscovery:
 
 ```sh
-python goodwe-autodiscovery.py
+python goodwe-mqtt.py
 ```
 
 Skip discovery and connect to a known inverter address:
 
 ```sh
-python goodwe-autodiscovery.py --host <inverter-ip>
+python goodwe-mqtt.py --host <inverter-ip>
 ```
 
 By default the script prints every runtime sensor returned by the inverter. Pass
@@ -50,45 +50,45 @@ Inverter information is shown only when no CLI arguments are passed, or when
 Show inverter information with a known host:
 
 ```sh
-python goodwe-autodiscovery.py --host <inverter-ip> --info
+python goodwe-mqtt.py --host <inverter-ip> --info
 ```
 
 Poll runtime values every 30 seconds:
 
 ```sh
-python goodwe-autodiscovery.py --host <inverter-ip> --sensors-file sensors.txt --poll
+python goodwe-mqtt.py --host <inverter-ip> --sensors-file sensors.txt --poll
 ```
 
 Poll runtime values every 10 seconds:
 
 ```sh
-python goodwe-autodiscovery.py --host <inverter-ip> --sensors-file sensors.txt --poll 10
+python goodwe-mqtt.py --host <inverter-ip> --sensors-file sensors.txt --poll 10
 ```
 
 Force DTLS explicitly:
 
 ```sh
-python goodwe-autodiscovery.py --host <inverter-ip> --dtls --family ET
+python goodwe-mqtt.py --host <inverter-ip> --dtls --family ET
 ```
 
 Use a different directed broadcast address:
 
 ```sh
-python goodwe-autodiscovery.py --broadcast-host <subnet-broadcast-ip>
+python goodwe-mqtt.py --broadcast-host <subnet-broadcast-ip>
 ```
 
 Increase only the fallback discovery wait time:
 
 ```sh
-python goodwe-autodiscovery.py --discovery-timeout 10
+python goodwe-mqtt.py --discovery-timeout 10
 ```
 
 ## Directed Discovery Fallback
 
-`goodwe-autodiscovery.py` includes a directed UDP discovery fallback using the same packet from the upstream issue comment:
+`goodwe-mqtt.py` includes a directed UDP discovery fallback using the same packet from the upstream issue comment:
 
 ```sh
-python goodwe-autodiscovery.py --broadcast-host <subnet-broadcast-ip> --discovery-timeout 10
+python goodwe-mqtt.py --broadcast-host <subnet-broadcast-ip> --discovery-timeout 10
 ```
 
 A DTLS-capable dongle may reply with something like:
@@ -97,7 +97,7 @@ A DTLS-capable dongle may reply with something like:
 dongle@sn,dtls_port:8899,<dongle-serial>
 ```
 
-In that case the source address of the UDP reply is treated as the inverter host, and `goodwe-autodiscovery.py` enables `dtls=True`.
+In that case the source address of the UDP reply is treated as the inverter host, and `goodwe-mqtt.py` enables `dtls=True`.
 
 ## CLI Options
 
@@ -108,7 +108,7 @@ In that case the source address of the UDP reply is treated as the inverter host
 --timeout           Timeout for inverter requests. Defaults to 1 second.
 --dtls              Force DTLS mode.
 --info              Show inverter information before runtime values.
---poll [SECONDS]    Poll runtime values. Defaults to 30 seconds.
+--poll [SECONDS]    Poll runtime values. Defaults to 30 seconds when no interval is supplied.
 --broadcast-host    Directed broadcast address for fallback discovery.
 --discovery-port    UDP discovery port. Defaults to 48899.
 --discovery-timeout Timeout for directed fallback discovery. Defaults to 1 second.

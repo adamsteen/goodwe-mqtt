@@ -2,12 +2,55 @@ import argparse
 import asyncio
 import ipaddress
 import inspect
+import os
 from pathlib import Path
 import re
 import socket
 import sys
 
 import goodwe
+
+
+INVERTER_FAMILIES = (
+    "ET",
+    "EH",
+    "BT",
+    "BH",
+    "ES",
+    "EM",
+    "BP",
+    "DT",
+    "MS",
+    "D-NS",
+    "XS",
+)
+DEFAULT_POLL_INTERVAL = 30.0
+DEFAULTS = {
+    "host": None,
+    "port": 8899,
+    "family": "ET",
+    "timeout": 1,
+    "dtls": False,
+    "info": False,
+    "poll": None,
+    "broadcast_host": None,
+    "discovery_port": 48899,
+    "discovery_timeout": 1,
+    "sensors_file": None,
+}
+ENV_VARS = {
+    "host": "GM_HOST",
+    "port": "GM_PORT",
+    "family": "GM_FAMILY",
+    "timeout": "GM_TIMEOUT",
+    "dtls": "GM_DTLS",
+    "info": "GM_INFO",
+    "poll": "GM_POLL",
+    "broadcast_host": "GM_BROADCAST_HOST",
+    "discovery_port": "GM_DISCOVERY_PORT",
+    "discovery_timeout": "GM_DISCOVERY_TIMEOUT",
+    "sensors_file": "GM_SENSORS_FILE",
+}
 
 
 def handle_max_retries_exception():
@@ -284,31 +327,177 @@ def positive_seconds(value):
     return seconds
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Read runtime data from a GoodWe inverter.")
-    parser.add_argument("--host", help="Inverter IP address or hostname. Skips discovery when provided.")
-    parser.add_argument("--port", type=int, default=8899, help="Inverter port to connect to. Use 502 for TCP/Modbus.")
-    parser.add_argument("--family", default="ET", choices=("ET", "EH", "BT", "BH", "ES", "EM", "BP", "DT", "MS", "D-NS", "XS"), help="Inverter family hint.")
-    parser.add_argument("--timeout", type=int, default=1, help="Seconds to wait for each inverter request before retrying.")
-    parser.add_argument("--dtls", action="store_true", help="Use DTLS-encrypted local Modbus, required by some Kit-20 dongles.")
-    parser.add_argument("--info", action="store_true", help="Show inverter information before runtime values.")
+def integer(value):
+    try:
+        return int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError("must be an integer") from None
+
+
+def number(value):
+    try:
+        return float(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError("must be a number") from None
+
+
+def inverter_family(value):
+    if value not in INVERTER_FAMILIES:
+        choices = ", ".join(INVERTER_FAMILIES)
+        raise argparse.ArgumentTypeError(f"must be one of: {choices}")
+    return value
+
+
+def boolean(value):
+    normalized = value.strip().lower()
+    if normalized in ("1", "true", "yes", "y", "on"):
+        return True
+    if normalized in ("0", "false", "no", "n", "off"):
+        return False
+    raise argparse.ArgumentTypeError(
+        "must be one of: 1, true, yes, on, 0, false, no, off"
+    )
+
+
+def poll_interval(value):
+    normalized = value.strip().lower()
+    if normalized in ("1", "true", "yes", "y", "on"):
+        return DEFAULT_POLL_INTERVAL
+    if normalized in ("0", "false", "no", "n", "off"):
+        return None
+    return positive_seconds(value)
+
+
+ENV_PARSERS = {
+    "host": str,
+    "port": integer,
+    "family": inverter_family,
+    "timeout": integer,
+    "dtls": boolean,
+    "info": boolean,
+    "poll": poll_interval,
+    "broadcast_host": str,
+    "discovery_port": integer,
+    "discovery_timeout": number,
+    "sensors_file": str,
+}
+
+
+def parse_env_config(parser):
+    config = {}
+    for key, env_var in ENV_VARS.items():
+        if env_var not in os.environ:
+            continue
+        try:
+            config[key] = ENV_PARSERS[key](os.environ[env_var])
+        except argparse.ArgumentTypeError as error:
+            parser.error(f"{env_var}: {error}")
+    return config
+
+
+def parse_args(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    env_var_list = ", ".join(ENV_VARS.values())
+    parser = argparse.ArgumentParser(
+        description="Read runtime data from a GoodWe inverter.",
+        epilog=f"Environment variables: {env_var_list}. CLI options take precedence.",
+    )
+    default = argparse.SUPPRESS
+    parser.add_argument(
+        "--host",
+        default=default,
+        help="Inverter IP address or hostname. Skips discovery when provided.",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=default,
+        help="Inverter port to connect to. Use 502 for TCP/Modbus.",
+    )
+    parser.add_argument(
+        "--family",
+        default=default,
+        choices=INVERTER_FAMILIES,
+        help="Inverter family hint.",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=default,
+        help="Seconds to wait for each inverter request before retrying.",
+    )
+    parser.add_argument(
+        "--dtls",
+        dest="dtls",
+        action="store_true",
+        default=default,
+        help="Use DTLS-encrypted local Modbus, required by some Kit-20 dongles.",
+    )
+    parser.add_argument(
+        "--no-dtls",
+        dest="dtls",
+        action="store_false",
+        default=default,
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--info",
+        dest="info",
+        action="store_true",
+        default=default,
+        help="Show inverter information before runtime values.",
+    )
+    parser.add_argument(
+        "--no-info",
+        dest="info",
+        action="store_false",
+        default=default,
+        help=argparse.SUPPRESS,
+    )
     parser.add_argument(
         "--poll",
         nargs="?",
-        const=30.0,
+        const=DEFAULT_POLL_INTERVAL,
+        default=default,
         type=positive_seconds,
         metavar="SECONDS",
         help="Poll runtime values repeatedly. Defaults to 30 seconds when no interval is supplied.",
     )
-    parser.add_argument("--broadcast-host", help="Directed broadcast address for fallback discovery.")
-    parser.add_argument("--discovery-port", type=int, default=48899, help="UDP discovery port for fallback discovery.")
-    parser.add_argument("--discovery-timeout", type=float, default=1, help="Seconds to wait for directed UDP fallback discovery.")
+    parser.add_argument(
+        "--no-poll",
+        dest="poll",
+        action="store_const",
+        const=None,
+        default=default,
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--broadcast-host",
+        default=default,
+        help="Directed broadcast address for fallback discovery.",
+    )
+    parser.add_argument(
+        "--discovery-port",
+        type=int,
+        default=default,
+        help="UDP discovery port for fallback discovery.",
+    )
+    parser.add_argument(
+        "--discovery-timeout",
+        type=float,
+        default=default,
+        help="Seconds to wait for directed UDP fallback discovery.",
+    )
     parser.add_argument(
         "--sensors-file",
-        default=None,
+        default=default,
         help="File containing sensor IDs to print. Blank lines and # comments are ignored.",
     )
-    return parser.parse_args()
+    cli_config = vars(parser.parse_args(argv))
+    env_config = parse_env_config(parser)
+    config = {**DEFAULTS, **env_config, **cli_config}
+    config["show_info"] = config["info"] or (not argv and not env_config)
+    return argparse.Namespace(**config)
 
 
 if __name__ == "__main__":
@@ -325,7 +514,7 @@ if __name__ == "__main__":
                 args.discovery_port,
                 args.discovery_timeout,
                 args.sensors_file,
-                args.info or len(sys.argv) == 1,
+                args.show_info,
                 args.poll,
             )
         )

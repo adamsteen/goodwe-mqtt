@@ -35,6 +35,20 @@ Try autodiscovery:
 python goodwe-mqtt.py
 ```
 
+All CLI options can also be set with environment variables. CLI arguments take
+precedence when both are supplied:
+
+```sh
+GM_HOST=<inverter-ip> GM_SENSORS_FILE=sensors.txt GM_POLL=10 python goodwe-mqtt.py
+```
+
+Boolean environment variables accept `1/0`, `true/false`, `yes/no`, and
+`on/off`. Set `GM_POLL=true` to use the default 30 second polling
+interval, a number such as `10` to choose the interval, or `false` to disable
+polling. When neither CLI options nor environment variables are supplied,
+inverter information is shown by default; setting any `GM_*` option suppresses
+that unless `GM_INFO=true` is set.
+
 Skip discovery and connect to a known inverter address:
 
 ```sh
@@ -44,8 +58,8 @@ python goodwe-mqtt.py --host <inverter-ip>
 By default the script prints every runtime sensor returned by the inverter. Pass
 `--sensors-file sensors.txt` to print only a supplied shortlist.
 Runtime values are printed as a `label | value | sensor` table.
-Inverter information is shown only when no CLI arguments are passed, or when
-`--info` is supplied.
+Inverter information is shown only when no CLI arguments or environment
+variables are supplied, or when `--info` / `GM_INFO=true` is supplied.
 
 Show inverter information with a known host:
 
@@ -99,21 +113,21 @@ dongle@sn,dtls_port:8899,<dongle-serial>
 
 In that case the source address of the UDP reply is treated as the inverter host, and `goodwe-mqtt.py` enables `dtls=True`.
 
-## CLI Options
+## CLI Options and Environment Variables
 
-```text
---host              Inverter IP or hostname. Skips discovery when provided.
---port              Inverter communication port. Defaults to 8899.
---family            GoodWe inverter family. Defaults to ET.
---timeout           Timeout for inverter requests. Defaults to 1 second.
---dtls              Force DTLS mode.
---info              Show inverter information before runtime values.
---poll [SECONDS]    Poll runtime values. Defaults to 30 seconds when no interval is supplied.
---broadcast-host    Directed broadcast address for fallback discovery.
---discovery-port    UDP discovery port. Defaults to 48899.
---discovery-timeout Timeout for directed fallback discovery. Defaults to 1 second.
---sensors-file      Optional sensor ID shortlist.
-```
+| CLI option | Environment variable | Description |
+| --- | --- | --- |
+| `--host` | `GM_HOST` | Inverter IP or hostname. Skips discovery when provided. |
+| `--port` | `GM_PORT` | Inverter communication port. Defaults to 8899. |
+| `--family` | `GM_FAMILY` | GoodWe inverter family. Defaults to ET. |
+| `--timeout` | `GM_TIMEOUT` | Timeout for inverter requests. Defaults to 1 second. |
+| `--dtls` | `GM_DTLS` | Force DTLS mode. |
+| `--info` | `GM_INFO` | Show inverter information before runtime values. |
+| `--poll [SECONDS]` | `GM_POLL` | Poll runtime values. Defaults to 30 seconds when enabled without an interval. |
+| `--broadcast-host` | `GM_BROADCAST_HOST` | Directed broadcast address for fallback discovery. |
+| `--discovery-port` | `GM_DISCOVERY_PORT` | UDP discovery port. Defaults to 48899. |
+| `--discovery-timeout` | `GM_DISCOVERY_TIMEOUT` | Timeout for directed fallback discovery. Defaults to 1 second. |
+| `--sensors-file` | `GM_SENSORS_FILE` | Optional sensor ID shortlist. |
 
 ## Recommended Dashboard Sensors
 

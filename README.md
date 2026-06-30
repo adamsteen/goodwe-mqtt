@@ -7,7 +7,7 @@ container-first MQTT publisher with REST diagnostics and a small read-only
 frontend; see [docs/design/service-design.md](docs/design/service-design.md).
 
 Container images are published from `main` to the repository's GitHub Container
-Registry package, `ghcr.io/<owner>/goodwe-mqtt:latest`.
+Registry package, `ghcr.io/adamsteen/goodwe-mqtt:latest`.
 
 This project exists because some newer GoodWe dongles do not behave like older plaintext UDP devices. In particular, some Kit-20 dongles advertise `dtls_port:8899` from the discovery endpoint and then drop normal plaintext inverter requests. This script tries the upstream `goodwe.search_inverters()` path first, falls back to a directed UDP discovery probe, detects DTLS-capable dongles, and then connects with an explicit inverter family.
 
@@ -41,7 +41,7 @@ The image expects a mounted YAML config at `/config/configuration.yaml`:
 ```sh
 docker run --rm \
   -v "$PWD/config:/config:ro" \
-  ghcr.io/<owner>/goodwe-mqtt:latest
+  ghcr.io/adamsteen/goodwe-mqtt:latest
 ```
 
 For Home Assistant MQTT discovery, copy `goodwe-mqtt.example.yaml` to

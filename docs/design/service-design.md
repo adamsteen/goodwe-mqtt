@@ -164,7 +164,7 @@ docker run \
   --rm \
   -p 8080:8080 \
   -v "$PWD/config:/config:ro" \
-  ghcr.io/<owner>/goodwe-mqtt:latest
+  ghcr.io/adamsteen/goodwe-mqtt:latest
 ```
 
 Defaults:

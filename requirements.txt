@@ -1,1 +1,3 @@
+PyYAML>=6.0
+paho-mqtt>=2.1
 goodwe[dtls] @ git+https://github.com/botts7/goodwe.git@feature/dtls-transport

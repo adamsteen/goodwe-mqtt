@@ -1,0 +1,42 @@
+inverter:
+  host: <inverter-ip>
+  port: 8899
+  family: ET
+  dtls: true
+
+poll: 30
+
+mqtt:
+  host: <mqtt-broker-host>
+  port: 1883
+  username: goodwe
+  password: ${GM_MQTT_PASSWORD}
+  client_id: goodwe-mqtt
+  base_topic: goodwe/inverter
+  retain: true
+  availability_topic: goodwe/inverter/status
+  last_seen_topic: goodwe/inverter/last_seen
+  precision:
+    default: 3
+    units:
+      W: 0
+      "%": 0
+      Hz: 2
+  discovery:
+    enabled: true
+    prefix: homeassistant
+    device_id: goodwe_inverter
+    device_name: GoodWe Inverter
+
+sensors:
+  - id: battery_soc
+    topic: battery/soc
+    required: true
+  - id: ppv
+    topic: solar/power
+  - id: pbattery1
+    topic: battery/power
+  - id: house_consumption
+    topic: house/power
+  - id: active_power
+    topic: grid/power

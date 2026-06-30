@@ -9,3 +9,4 @@ pyvenv.cfg
 
 .DS_Store
 .env
+goodwe-mqtt.yaml

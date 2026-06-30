@@ -70,11 +70,7 @@ DEFAULT_MQTT = {
     "last_seen_topic": "goodwe/inverter/last_seen",
     "precision": {
         "default": 3,
-        "units": {
-            "W": 0,
-            "%": 0,
-            "Hz": 2,
-        },
+        "units": {},
         "sensors": {},
     },
     "discovery": {
@@ -444,13 +440,28 @@ class MqttPublisher:
             sensor_id = sensor_config["id"]
             unique_id = f"{device_identifier}_{normalize_topic_part(sensor_id)}"
             state_topic = join_topic(self.config["base_topic"], sensor_config["topic"])
+            sensor_availability_topic = join_topic(
+                self.config["base_topic"],
+                sensor_config["topic"],
+                "availability",
+            )
             payload = {
                 "name": sensor_config.get("name") or (sensor.name if sensor else sensor_id),
                 "unique_id": unique_id,
                 "state_topic": state_topic,
-                "availability_topic": self.config["availability_topic"],
-                "payload_available": "online",
-                "payload_not_available": "offline",
+                "availability": [
+                    {
+                        "topic": self.config["availability_topic"],
+                        "payload_available": "online",
+                        "payload_not_available": "offline",
+                    },
+                    {
+                        "topic": sensor_availability_topic,
+                        "payload_available": "online",
+                        "payload_not_available": "offline",
+                    },
+                ],
+                "availability_mode": "all",
                 "device": device,
             }
             unit = reading["unit"]
@@ -482,7 +493,16 @@ class MqttPublisher:
             sensor_config = reading["config"]
             state_topic = join_topic(self.config["base_topic"], sensor_config["topic"])
             status_topic = join_topic(self.config["base_topic"], sensor_config["topic"], "status")
+            availability_topic = join_topic(
+                self.config["base_topic"],
+                sensor_config["topic"],
+                "availability",
+            )
             self.publish_status_if_changed(status_topic, reading["status"])
+            self.publish_status_if_changed(
+                availability_topic,
+                "online" if reading["status"] == "ok" else "offline",
+            )
             if reading["payload"] is not None:
                 self.publish_if_changed(
                     state_topic,
@@ -727,26 +747,6 @@ def poll_interval(value):
     return positive_seconds(value)
 
 
-def sensor_ids(value):
-    if value is None:
-        return None
-    if isinstance(value, str):
-        values = value.split(",")
-    elif isinstance(value, (list, tuple)):
-        values = value
-    else:
-        raise argparse.ArgumentTypeError(
-            "must be a comma-separated string or YAML list"
-        )
-
-    parsed = []
-    for item in values:
-        sensor_id = str(item).strip()
-        if sensor_id and sensor_id not in parsed:
-            parsed.append(sensor_id)
-    return parsed or None
-
-
 ENV_PARSERS = {
     "config": string,
     "host": string,
@@ -756,7 +756,7 @@ ENV_PARSERS = {
     "dtls": boolean,
     "info": boolean,
     "poll": poll_interval,
-    "sensors": sensor_ids,
+    "sensors": sensor_configs,
     "broadcast_host": string,
     "discovery_port": integer,
     "discovery_timeout": number,

@@ -297,16 +297,18 @@ goodwe/inverter/status               online
 goodwe/inverter/last_seen            2026-06-30T10:15:30Z
 ```
 
-Initial sensor status topics:
+Initial sensor status and Home Assistant availability topics:
 
 ```text
 <base_topic>/<sensor_topic>/status
+<base_topic>/<sensor_topic>/availability
 ```
 
 Example:
 
 ```text
 goodwe/inverter/battery/soc/status   missing
+goodwe/inverter/battery/soc/availability offline
 ```
 
 Optional later JSON snapshot topic:
